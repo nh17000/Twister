@@ -1,8 +1,0 @@
-model = base
-model_0 = turret	-0.174625 0 .
-model_1 = indexer	-0.071544 . 0.368300
-model_2 = spin		-0.009525 0 .
-model_3 = intake_a 	0.136351 . 0.193383
-model_4 = intake_b 	0.224021 . 0.142044
-model_5 = intake_c 	0.382877 . 0.324873
-model_6 = turret_hood	-0.160961 0.095038 0.560462

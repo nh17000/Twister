@@ -17,18 +17,12 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.RobotBase;
-import frc.robot.subsystems.vision.VisionConstants;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -56,14 +50,6 @@ public final class Constants {
     public static final double g = 11; // 9.79285 m/s^2 in Houston
 
     public static final class AlignConstants {
-        public static final double BRANCH_SPACING = Units.inchesToMeters(12.97 / 2.0);
-        public static final double REEF_ALIGN_TZ = Units.inchesToMeters(22);
-
-        public static final Translation2d LEFT_BRANCH_OFFSET = new Translation2d(REEF_ALIGN_TZ, -BRANCH_SPACING);
-        public static final Translation2d RIGHT_BRANCH_OFFSET = new Translation2d(REEF_ALIGN_TZ, BRANCH_SPACING);
-        public static final Translation2d MID_OFFSET = new Translation2d(REEF_ALIGN_TZ, 0.0);
-        public static final Translation2d STATION_OFFSET = new Translation2d(Units.inchesToMeters(18), 0.0);
-
         public static final double DRIVE_kP = 5.0; // m/s per m error
         public static final double DRIVE_kI = 0.0;
         public static final double DRIVE_kD = 0.0;
@@ -79,167 +65,40 @@ public final class Constants {
         public static final double ALIGN_ROT_TOLERANCE = Units.degreesToRadians(3);
         public static final double ALIGN_TRANSLATION_TOLERANCE = Units.inchesToMeters(2);
 
-        public static final double NET_ALIGN_TZ = Units.inchesToMeters(32);
-        public static final double MIN_DIST_TO_WALL = Units.inchesToMeters(28);
-        public static final double[] NET_RED_Y = {MIN_DIST_TO_WALL, FieldConstants.FIELD_WIDTH / 2.0 - MIN_DIST_TO_WALL
-        };
-        public static final double[] NET_BLUE_Y = {
-            FieldConstants.FIELD_WIDTH / 2.0 + MIN_DIST_TO_WALL, FieldConstants.FIELD_WIDTH - MIN_DIST_TO_WALL
-        };
+        public static final Translation2d AMP_OFFSET =
+                new Translation2d(Units.inchesToMeters(0), -Units.inchesToMeters(21));
     }
 
     public static final class FieldConstants {
-        public static final double FIELD_LENGTH = Units.inchesToMeters(648);
-        public static final double FIELD_WIDTH = Units.inchesToMeters(324);
+        public static final double FIELD_LENGTH = Units.inchesToMeters(651.223);
+        public static final double FIELD_WIDTH = Units.inchesToMeters(323.277);
 
-        public static final Pose2d CENTER =
-                new Pose2d(FIELD_LENGTH / 2.0, FieldConstants.FIELD_WIDTH / 2.0, Rotation2d.kZero);
+        public static final Pose2d BLUE_AMP = new Pose2d(Units.inchesToMeters(72.455), FIELD_WIDTH, Rotation2d.kZero);
+        public static final Pose2d RED_AMP =
+                new Pose2d(FIELD_LENGTH - Units.inchesToMeters(72.455), FIELD_WIDTH, Rotation2d.kZero);
 
-        public static final double LOW_FOOTHILL_HEIGHT = Units.inchesToMeters(46.5);
-        public static final double HIGH_FOOTHILL_HEIGHT = Units.inchesToMeters(103.5);
-        public static final double UPTOWN_HEIGHT = Units.inchesToMeters(68.574);
-        public static final double DOWNTOWN_HEIGHT = Units.inchesToMeters(42 + 6); // shoot above opening
+        public static final List<Pose2d> AMPS = List.of(BLUE_AMP, RED_AMP);
 
-        public static final Pose2d LEFT_UPTOWN_DISTRICT =
-                new Pose2d(Units.inchesToMeters(204), Units.inchesToMeters(325.882), Rotation2d.kZero);
-        public static final Pose2d LEFT_DOWNTOWN_DISTRICT =
-                new Pose2d(Units.inchesToMeters(204), Units.inchesToMeters(-1), Rotation2d.kZero);
-        public static final double DISTRICT_SEPARATION = Units.inchesToMeters(48);
-        public static final int NUM_DISTRICTS = 6; // 6 uptown and 6 downtown districts
+        private static final Translation3d TOP_RIGHT_SPEAKER = new Translation3d(
+                Units.inchesToMeters(18.055), Units.inchesToMeters(238.815), Units.inchesToMeters(83.091));
 
-        public static final List<Pose2d> FOOTHILL_DISTRICTS = new ArrayList<>();
-        public static final List<Pose2d> UPTOWN_DISTRICTS = new ArrayList<>();
-        public static final List<Pose2d> DOWNTOWN_DISTRICTS = new ArrayList<>();
+        private static final Translation3d BOTTOM_LEFT_SPEAKER =
+                new Translation3d(0.0, Units.inchesToMeters(197.765), Units.inchesToMeters(78.324));
 
-        static {
-            // east foothills, red protected zone
-            FOOTHILL_DISTRICTS.add(new Pose2d(0.4127, 7.196, Rotation2d.kZero));
-            FOOTHILL_DISTRICTS.add(new Pose2d(1.223, 7.882, Rotation2d.kZero));
+        /** Center of the speaker opening (blue alliance) */
+        public static final Translation3d BLUE_SPEAKER_CENTER = BOTTOM_LEFT_SPEAKER.interpolate(TOP_RIGHT_SPEAKER, 0.5);
 
-            // west foothills, blue protected zone
-            FOOTHILL_DISTRICTS.add(new Pose2d(FIELD_LENGTH - 0.4127, 7.196, Rotation2d.kZero));
-            FOOTHILL_DISTRICTS.add(new Pose2d(FIELD_LENGTH - 1.223, 7.882, Rotation2d.kZero));
+        public static final Pose2d BLUE_SPEAKER_POSE =
+                new Pose2d(BLUE_SPEAKER_CENTER.getX(), BLUE_SPEAKER_CENTER.getY(), Rotation2d.kZero);
+        public static final Pose2d RED_SPEAKER_POSE =
+                new Pose2d(FIELD_LENGTH - BLUE_SPEAKER_CENTER.getX(), BLUE_SPEAKER_CENTER.getY(), Rotation2d.kZero);
 
-            for (int i = 0; i < NUM_DISTRICTS; i++) {
-                UPTOWN_DISTRICTS.add(
-                        LEFT_UPTOWN_DISTRICT.plus(new Transform2d(i * DISTRICT_SEPARATION, 0, Rotation2d.kZero)));
-
-                DOWNTOWN_DISTRICTS.add(
-                        LEFT_DOWNTOWN_DISTRICT.plus(new Transform2d(i * DISTRICT_SEPARATION, 0, Rotation2d.kZero)));
-            }
-        }
-
-        public static final int BLUE_BUBBLE_ROWS = 5;
-        public static final int RED_BUBBLE_ROWS = 5;
-        public static final int BLUE_BUBBLE_COLS = 3;
-        public static final int RED_BUBBLE_COLS = 3;
-        public static final double BUBBLE_ROW_SEPARATION = Units.inchesToMeters(24);
-        public static final double BUBBLE_COL_SEPARATION = Units.inchesToMeters(48);
-        public static final Pose2d[] BLUE_BUBBLE_STARTING_POSITIONS = new Pose2d[BLUE_BUBBLE_ROWS * BLUE_BUBBLE_COLS];
-        public static final Pose2d[] RED_BUBBLE_STARTING_POSITIONS = new Pose2d[RED_BUBBLE_ROWS * BLUE_BUBBLE_COLS];
-        public static final Pose2d FIRST_BLUE_BUBBLE_STARTING_POSE =
-                new Pose2d(Units.inchesToMeters(204), Units.inchesToMeters(114), Rotation2d.kZero);
-        public static final Pose2d FIRST_RED_BUBBLE_STARTING_POSE =
-                new Pose2d(Units.inchesToMeters(444), Units.inchesToMeters(114), Rotation2d.kZero);
-
-        static {
-            int index = 0;
-            for (int row = 0; row < BLUE_BUBBLE_ROWS; row++) {
-                for (int col = 0; col < BLUE_BUBBLE_COLS; col++) {
-                    BLUE_BUBBLE_STARTING_POSITIONS[index++] =
-                            FIRST_BLUE_BUBBLE_STARTING_POSE.transformBy(new Transform2d(
-                                    col * BUBBLE_COL_SEPARATION, row * BUBBLE_ROW_SEPARATION, Rotation2d.kZero));
-                }
-            }
-            index = 0;
-            for (int row = 0; row < RED_BUBBLE_ROWS; row++) {
-                for (int col = 0; col < RED_BUBBLE_COLS; col++) {
-                    RED_BUBBLE_STARTING_POSITIONS[index++] = FIRST_RED_BUBBLE_STARTING_POSE.transformBy(new Transform2d(
-                            col * -BUBBLE_COL_SEPARATION, row * BUBBLE_ROW_SEPARATION, Rotation2d.kZero));
-                }
-            }
-        }
-
-        // reefscape constants, old
-        public static final int[] BLUE_REEF_TAG_IDS = {18, 19, 20, 21, 22, 17};
-        public static final int[] BLUE_CORAL_STATION_TAG_IDS = {12, 13};
-        public static final int[] RED_REEF_TAG_IDS = {7, 6, 11, 10, 9, 8};
-        public static final int[] RED_CORAL_STATION_TAG_IDS = {1, 2};
-        public static final int[] ALL_REEF_TAG_IDS = {18, 19, 20, 21, 22, 17, 7, 6, 11, 10, 9, 8};
-
-        public static final List<Pose2d> CORAL_STATIONS = new ArrayList<>();
-
-        static {
-            for (int tag : BLUE_CORAL_STATION_TAG_IDS) {
-                CORAL_STATIONS.add(
-                        VisionConstants.aprilTagLayout.getTagPose(tag).get().toPose2d());
-            }
-            for (int tag : RED_CORAL_STATION_TAG_IDS) {
-                CORAL_STATIONS.add(
-                        VisionConstants.aprilTagLayout.getTagPose(tag).get().toPose2d());
-            }
-        }
-
-        public static final Pose3d[] REEF_TAG_POSES = new Pose3d[RED_REEF_TAG_IDS.length + BLUE_REEF_TAG_IDS.length];
-
-        static {
-            int i = 0;
-            for (int tag : FieldConstants.RED_REEF_TAG_IDS) {
-                REEF_TAG_POSES[i++] =
-                        VisionConstants.aprilTagLayout.getTagPose(tag).get();
-            }
-            for (int tag : FieldConstants.BLUE_REEF_TAG_IDS) {
-                REEF_TAG_POSES[i++] =
-                        VisionConstants.aprilTagLayout.getTagPose(tag).get();
-            }
-        }
-
-        public static final List<Pose2d> REEF_TAGS = new ArrayList<>();
-
-        static {
-            for (Pose3d tag : REEF_TAG_POSES) {
-                REEF_TAGS.add(tag.toPose2d());
-            }
-        }
-
-        public static final Transform3d HIGH_ALGAE_TRANSFORM =
-                new Transform3d(Units.inchesToMeters(-6), 0, Units.inchesToMeters(39.575), Rotation3d.kZero);
-        public static final Transform3d LOW_ALGAE_TRANSFORM =
-                new Transform3d(Units.inchesToMeters(-6), 0, Units.inchesToMeters(23.675), Rotation3d.kZero);
-
-        public static final Pose3d[] REEF_ALGAE_POSES = new Pose3d[REEF_TAG_POSES.length];
-
-        static {
-            for (int i = 0; i < REEF_ALGAE_POSES.length; i++) {
-                REEF_ALGAE_POSES[i] = REEF_TAG_POSES[i].plus(i % 2 == 0 ? HIGH_ALGAE_TRANSFORM : LOW_ALGAE_TRANSFORM);
-            }
-        }
-
-        public static final double BARGE_X = FIELD_LENGTH / 2.0;
-        public static final double BARGE_WIDTH = Units.inchesToMeters(40) / 2.0;
-        public static final double BARGE_HEIGHT = Units.inchesToMeters(74 + 8);
-        public static final double BARGE_HEIGHT_TOLERANCE = Units.inchesToMeters(12);
-
-        public static final Pose2d BLUE_PROCESSOR =
-                VisionConstants.aprilTagLayout.getTagPose(16).get().toPose2d();
-        public static final Pose2d RED_PROCESSOR =
-                VisionConstants.aprilTagLayout.getTagPose(3).get().toPose2d();
-
-        public static final double TRANSLATIONAL_TOLERANCE = Units.inchesToMeters(16);
-        public static final double DROP_COOLDOWN = 2.0;
+        public static final double SPEAKER_HEIGHT = BLUE_SPEAKER_CENTER.getZ();
     }
 
     public static final class VisualizerConstants {
-        public static final Translation3d M0_ZERO = new Translation3d(0.0, -0.174625, 0.0);
-        public static final Translation3d M1_ZERO = new Translation3d(0.0, -0.071544, 0.368300);
-        public static final Translation3d M2_ZERO = new Translation3d(0.0, -0.009525, 0.0);
-        public static final Translation3d M3_ZERO = new Translation3d(0.0, 0.136351, 0.193383);
-        public static final Translation3d M4_ZERO = new Translation3d(0.0, 0.215676, 0.118053);
-        public static final Translation3d M5_ZERO = new Translation3d(0.0, 0.246637, 0.450096);
-        public static final Translation3d M5_OFFSET = M5_ZERO.minus(M3_ZERO);
-        public static final Translation3d M6_ZERO =
-                new Translation3d(-0.095038, 0.160961, 0.560462); // why is y positive?
-        public static final Translation3d M6_OFFSET = M6_ZERO.minus(M0_ZERO);
+        public static final Translation3d SHOOTER_ZERO = new Translation3d(0.0, 0.0, 0.333377);
+        public static final Translation3d DIVERTER_ZERO = new Translation3d(-0.178816, 0.0, 0.470029);
     }
 
     public static final class TurretConstants {
@@ -297,18 +156,59 @@ public final class Constants {
         public static final double FF_ERROR_THRESHOLD = Units.degreesToRadians(45);
         // only apply feedforward if the drivetrain is rotating at a reasonable speed
         public static final double FF_CHASSIS_ROT_VELOCITY_LIMIT = 1.5 * Math.PI; // rad/s
+
+        public static final Rotation2d AMP_SETPOINT = Rotation2d.k180deg;
     }
 
     public static final class IntakeConstants {
         public enum IntakeState {
-            STOWED(Units.degreesToRadians(55), 0),
-            DEPLOYED(PIVOT_MIN_ANGLE, 6),
-            EJECTING(Units.degreesToRadians(45), -6);
+            OFF(0),
+            INTAKING(6),
+            EJECTING(-6);
+
+            public final double rollerVolts;
+
+            private IntakeState(double rollerVolts) {
+                this.rollerVolts = rollerVolts;
+            }
+        }
+
+        public static final TalonFXConfiguration getRollerConfig() {
+            TalonFXConfiguration config = new TalonFXConfiguration();
+
+            config.CurrentLimits.SupplyCurrentLimitEnable = true;
+            config.CurrentLimits.SupplyCurrentLimit = 20;
+            config.CurrentLimits.StatorCurrentLimitEnable = true;
+            config.CurrentLimits.StatorCurrentLimit = 20;
+
+            config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+            config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+
+            return config;
+        }
+
+        public static final int ROLLER_ID = 51;
+        public static final double ROLLER_GEAR_RATIO = (35. / 14.); // 2.5
+        public static final double ROLLER_P_COEFFICIENT = 2 * Math.PI / ROLLER_GEAR_RATIO;
+
+        public static final double ROLLER_MASS = Units.lbsToKilograms(2);
+        public static final double ROLLER_RADIUS = Units.inchesToMeters(1);
+        // public static final double ROLLER_MOI = 1.0 / 2.0 * ROLLER_MASS * ROLLER_RADIUS * ROLLER_RADIUS;
+        public static final double ROLLER_SHAFT_MOI = 0.001; // ROLLER_MOI * ROLLER_GEAR_RATIO * ROLLER_GEAR_RATIO;
+
+        public static final DCMotor ROLLER_MOTOR = DCMotor.getKrakenX60(1);
+    }
+
+    public static final class DiverterConstants {
+        public enum DiverterState {
+            STOWED(PIVOT_MAX_ANGLE, 0),
+            DEPLOYED(PIVOT_STARTING_ANGLE, 6),
+            REVERSE(PIVOT_STARTING_ANGLE, -6);
 
             public final double pivotRads;
             public final double rollerVolts;
 
-            private IntakeState(double pivotRads, double rollerVolts) {
+            private DiverterState(double pivotRads, double rollerVolts) {
                 this.pivotRads = pivotRads;
                 this.rollerVolts = rollerVolts;
             }
@@ -353,17 +253,17 @@ public final class Constants {
             return config;
         }
 
-        public static final int PIVOT_ID = 50;
+        public static final int PIVOT_ID = 30;
         public static final double PIVOT_GEAR_RATIO = (42. / 14.) * (66. / 20.) * (50. / 14.); // ~35.36
         public static final double PIVOT_P_COEFFICIENT = 2 * Math.PI / PIVOT_GEAR_RATIO;
 
-        public static final int ROLLER_ID = 51;
+        public static final int ROLLER_ID = 31;
         public static final double ROLLER_GEAR_RATIO = (35. / 14.); // 2.5
         public static final double ROLLER_P_COEFFICIENT = 2 * Math.PI / ROLLER_GEAR_RATIO;
 
-        public static final double PIVOT_STARTING_ANGLE = Units.degreesToRadians(66.75);
-        public static final double PIVOT_MIN_ANGLE = Units.degreesToRadians(28.07);
-        public static final double PIVOT_MAX_ANGLE = Units.degreesToRadians(66.75);
+        public static final double PIVOT_STARTING_ANGLE = Units.degreesToRadians(48.1);
+        public static final double PIVOT_MIN_ANGLE = Units.degreesToRadians(-45);
+        public static final double PIVOT_MAX_ANGLE = Units.degreesToRadians(158);
 
         public static final double PIVOT_MASS = Units.lbsToKilograms(7);
         public static final double PIVOT_LENGTH = Units.inchesToMeters(18);
@@ -374,50 +274,7 @@ public final class Constants {
         public static final double ROLLER_SHAFT_MOI = ROLLER_MOI * ROLLER_GEAR_RATIO * ROLLER_GEAR_RATIO;
 
         public static final DCMotor PIVOT_MOTOR = DCMotor.getKrakenX60(1);
-        public static final DCMotor ROLLER_MOTOR = DCMotor.getKrakenX60(1); // x44
-    }
-
-    public static final class SpindexerConstants {
-        public enum SpindexerState {
-            SPAIN_WITHOUT_THE_SA(0), // ref, start the pin count! (off)
-            SPAIN_WITHOUT_THE_IN(1), // enjoy a relaxing retreat... (low speed)
-            ESPANA_SIN_EL_PAN(4), // ts (this spindexer) tiene mucha hambre (medium speed)
-            SPAIN_WITHOUT_THE_A(12); // spin! (high speed)
-
-            public final double volts;
-
-            private SpindexerState(double volts) {
-                this.volts = volts;
-            }
-        }
-
-        public static final TalonFXConfiguration getSpindexerConfig() {
-            TalonFXConfiguration config = new TalonFXConfiguration();
-
-            config.CurrentLimits.SupplyCurrentLimitEnable = true;
-            config.CurrentLimits.SupplyCurrentLimit = 20;
-            config.CurrentLimits.StatorCurrentLimitEnable = true;
-            config.CurrentLimits.StatorCurrentLimit = 20;
-
-            config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-            config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-
-            return config;
-        }
-
-        public static final int SPINDEXER_ID = 40;
-        public static final double SPINDEXER_GEAR_RATIO = (84. / 12.) * (40. / 32.) * (36. / 14.); // 22.5
-        public static final double SPINDEXER_P_COEFFICIENT = 2 * Math.PI / SPINDEXER_GEAR_RATIO;
-
-        // 1 bubble weighs 1.5lbs
-        public static final double SPINDEXER_MASS = Units.lbsToKilograms(10);
-        // each bubble "orbits" ~6.4 in from the center
-        public static final double BUBBLE_TO_SPINDEXER = Units.inchesToMeters(6.379881);
-        public static final double SPINDEXER_MOI =
-                1.0 / 2.0 * SPINDEXER_MASS * BUBBLE_TO_SPINDEXER * BUBBLE_TO_SPINDEXER;
-        public static final double SPINDEXER_SHAFT_MOI = SPINDEXER_MOI * SPINDEXER_GEAR_RATIO * SPINDEXER_GEAR_RATIO;
-
-        public static final DCMotor SPINDEXER_MOTOR = DCMotor.getKrakenX60(1);
+        public static final DCMotor ROLLER_MOTOR = DCMotor.getKrakenX60(1);
     }
 
     public static final class TransferConstants {
@@ -494,15 +351,15 @@ public final class Constants {
 
         public static final double SHOOTER_MASS = Units.lbsToKilograms(6);
         public static final double SHOOTER_RADIUS = Units.inchesToMeters(2);
-        public static final double SHOOTER_MOI = 0.004;
+        public static final double SHOOTER_MOI = 0.001;
 
         public static final DCMotor SHOOTER_MOTORS = DCMotor.getKrakenX60(2);
 
         // 50% of tangential velocity is transferred to game piece
         public static final double EFFICIENCY = 0.5;
         public static final double TANGENTIAL_VELOCITY_AT_12V =
-                50 * SHOOTER_P_COEFFICIENT * SHOOTER_RADIUS * EFFICIENCY; // ~32/2 m/s
-        public static final double EJECT_HEIGHT = 0.67; // 0.635
+                SHOOTER_P_COEFFICIENT * SHOOTER_RADIUS * EFFICIENCY; // ~32 m/s
+        public static final double EJECT_HEIGHT = 0.5; // 0.67
     }
 
     public static final class HoodConstants {
@@ -535,13 +392,15 @@ public final class Constants {
         public static final double HOOD_GEAR_RATIO = (186. / 10.) * (30. / 14.); // ~39.86
         public static final double HOOD_P_COEFFICIENT = 2 * Math.PI / HOOD_GEAR_RATIO;
 
-        public static final double HOOD_STARTING_ANGLE = Units.degreesToRadians(30);
-        public static final double HOOD_MIN_ANGLE = Units.degreesToRadians(30);
-        public static final double HOOD_MAX_ANGLE = Units.degreesToRadians(75); // 64
+        public static final double HOOD_STARTING_ANGLE = Units.degreesToRadians(65);
+        public static final double HOOD_MIN_ANGLE = Units.degreesToRadians(0);
+        public static final double HOOD_MAX_ANGLE = Units.degreesToRadians(90);
 
         public static final double HOOD_MASS = Units.lbsToKilograms(4);
         public static final double HOOD_LENGTH = Units.inchesToMeters(8);
 
         public static final DCMotor HOOD_MOTOR = DCMotor.getKrakenX60(1); // x44
+
+        public static final double HOOD_AMPING_ANGLE = Units.degreesToRadians(65);
     }
 }

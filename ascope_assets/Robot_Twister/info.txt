@@ -1,0 +1,13 @@
+model = base
+model_0 = turret (rotating portion)
+model_1 = "pitch" (shooter)
+model_2 = diverter (amp bar)
+
+todo: climbers
+
+0 0 0 turret
+0 0 0.333377 pitch
+0 0.178816 0.470029 diverter
+
+
+tip: usually end up switching (x,y) to (-y, x)

@@ -12,7 +12,7 @@ public class Intake extends SubsystemBase {
     @AutoLogOutput
     @Getter
     @Setter
-    private IntakeState state = IntakeState.STOWED;
+    private IntakeState state = IntakeState.INTAKING;
 
     private IntakeIO io;
     private final IntakeIOInputsAutoLogged inputs = new IntakeIOInputsAutoLogged();
@@ -26,20 +26,11 @@ public class Intake extends SubsystemBase {
         io.updateInputs(inputs);
         Logger.processInputs("Intake", inputs);
 
-        double pivotSetpointRots =
-                (state.pivotRads - IntakeConstants.PIVOT_STARTING_ANGLE) / IntakeConstants.PIVOT_P_COEFFICIENT;
         double rollerSetpointVolts = state.rollerVolts;
 
-        io.runPivotPosition(pivotSetpointRots);
         io.runRollerVolts(rollerSetpointVolts);
 
-        Logger.recordOutput("Intake/Pivot Setpoint Rots", pivotSetpointRots);
         Logger.recordOutput("Intake/Roller Setpoint Volts", rollerSetpointVolts);
-    }
-
-    @AutoLogOutput
-    public double getPivotAngleRadsToHorizontal() {
-        return inputs.pivotData.position() * IntakeConstants.PIVOT_P_COEFFICIENT + IntakeConstants.PIVOT_STARTING_ANGLE;
     }
 
     public double getRollerVelocity() {

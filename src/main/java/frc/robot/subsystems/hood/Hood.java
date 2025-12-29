@@ -27,6 +27,7 @@ public class Hood extends SubsystemBase {
 
         io.runPosition(setpointRots);
 
+        Logger.recordOutput("Hood/Setpoint Rads from Horizontal", setpointRads);
         Logger.recordOutput("Hood/Setpoint Degs from Horizontal", Units.radiansToDegrees(setpointRads));
         Logger.recordOutput("Hood/Setpoint Rots", setpointRots);
     }

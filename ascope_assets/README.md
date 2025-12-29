@@ -1,7 +1,7 @@
 # AdvantageScope Quick Setup
 
 - Open AdvantageScope, and navigate to `Help > Show Assets Folder`
-- Copy the `Robot_Supearman/` folder into the `userAssets/` directory
+- Copy the `Robot_Twister/` folder into the `userAssets/` directory
 - Next, navigate to File > Import Layout
 - Select the `advantagescope_sim_layout.json`
 

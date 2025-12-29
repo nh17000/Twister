@@ -6,7 +6,6 @@ import org.littletonrobotics.junction.AutoLog;
 public interface IntakeIO {
     @AutoLog
     static class IntakeIOInputs {
-        public MotorData pivotData = new MotorData();
         public MotorData rollerData = new MotorData();
     }
 

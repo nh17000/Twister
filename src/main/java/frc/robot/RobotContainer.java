@@ -23,15 +23,20 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Constants.DiverterConstants.DiverterState;
 import frc.robot.Constants.IntakeConstants.IntakeState;
 import frc.robot.Constants.TransferConstants.TransferState;
 import frc.robot.commands.AutoAim;
-import frc.robot.commands.AutoAim.Goal;
-import frc.robot.commands.AutoAlign;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.diverter.Diverter;
+import frc.robot.subsystems.diverter.DiverterIO;
+import frc.robot.subsystems.diverter.DiverterIOReal;
+import frc.robot.subsystems.diverter.DiverterIOSim;
 import frc.robot.subsystems.drive.*;
 import frc.robot.subsystems.hood.Hood;
 import frc.robot.subsystems.hood.HoodIO;
@@ -45,10 +50,6 @@ import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.shooter.ShooterIO;
 import frc.robot.subsystems.shooter.ShooterIOReal;
 import frc.robot.subsystems.shooter.ShooterIOSim;
-import frc.robot.subsystems.spindexer.Spindexer;
-import frc.robot.subsystems.spindexer.SpindexerIO;
-import frc.robot.subsystems.spindexer.SpindexerIOReal;
-import frc.robot.subsystems.spindexer.SpindexerIOSim;
 import frc.robot.subsystems.transfer.Transfer;
 import frc.robot.subsystems.transfer.TransferIO;
 import frc.robot.subsystems.transfer.TransferIOReal;
@@ -59,9 +60,10 @@ import frc.robot.subsystems.turret.TurretIOReal;
 import frc.robot.subsystems.turret.TurretIOSim;
 import frc.robot.subsystems.vision.*;
 import frc.robot.util.heroheist.HeldGamePieceManager;
-import frc.robot.util.heroheist.HeroHeistArena;
+import java.util.function.BooleanSupplier;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.ironmaple.simulation.seasonspecific.crescendo2024.Arena2024Crescendo;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -76,18 +78,17 @@ public class RobotContainer {
     private final Vision vision;
     private final Turret turret;
     private final Intake intake;
-    private final Spindexer spindexer;
     private final Transfer transfer;
     private final Shooter shooter;
     private final Hood hood;
+    private final Diverter diverter;
 
-    public final RobotVisualizer visualizer;
-    private final HeldGamePieceManager manager;
-
-    private final AutoAlign align;
     private final AutoAim aimAssist;
 
     private SwerveDriveSimulation driveSimulation = null;
+    public RobotVisualizer visualizer = null;
+    private HeldGamePieceManager manager = null;
+    private BooleanSupplier multiNotePossession = () -> false; // todo real implementation w/ sensors
 
     // Controller
     private static final CommandXboxController controller = new CommandXboxController(0);
@@ -114,17 +115,16 @@ public class RobotContainer {
                         new VisionIOLimelight(VisionConstants.camera1Name, drive::getRotation));
                 turret = new Turret(new TurretIOReal(), drive::getChassisSpeeds);
                 intake = new Intake(new IntakeIOReal());
-                spindexer = new Spindexer(new SpindexerIOReal());
                 transfer = new Transfer(new TransferIOReal());
                 shooter = new Shooter(new ShooterIOReal());
                 hood = new Hood(new HoodIOReal());
-                align = new AutoAlign(drive::getPose);
+                diverter = new Diverter(new DiverterIOReal());
                 aimAssist = new AutoAim(drive::getPose);
 
                 break;
             case SIM:
                 // Sim robot, instantiate physics sim IO implementations
-                SimulatedArena.overrideInstance(new HeroHeistArena());
+                SimulatedArena.overrideInstance(new Arena2024Crescendo());
 
                 driveSimulation = new SwerveDriveSimulation(Drive.mapleSimConfig, new Pose2d(3, 3, new Rotation2d()));
                 SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
@@ -148,12 +148,28 @@ public class RobotContainer {
                         );
                 turret = new Turret(new TurretIOSim(), drive::getChassisSpeeds);
                 intake = new Intake(new IntakeIOSim());
-                spindexer = new Spindexer(new SpindexerIOSim());
                 transfer = new Transfer(new TransferIOSim());
                 shooter = new Shooter(new ShooterIOSim());
                 hood = new Hood(new HoodIOSim());
-                align = new AutoAlign(driveSimulation::getSimulatedDriveTrainPose);
+                diverter = new Diverter(new DiverterIOSim());
                 aimAssist = new AutoAim(driveSimulation::getSimulatedDriveTrainPose);
+
+                visualizer = new RobotVisualizer(
+                        turret::getTurretAngleRads,
+                        hood::getAngleRadsToHorizontal,
+                        diverter::getPivotAngleRadsToHorizontal);
+
+                manager = new HeldGamePieceManager(
+                        intake::getRollerVelocity,
+                        transfer::getAngularVelocityRadPerSec,
+                        turret::getTurretAngleRads,
+                        shooter::getAngularVelocityRadPerSec,
+                        diverter::getRollerVelocity,
+                        visualizer::getHoodTransform,
+                        visualizer::getDiverterTransform,
+                        driveSimulation);
+
+                multiNotePossession = manager::holdingMultipleNotes;
 
                 break;
 
@@ -169,11 +185,10 @@ public class RobotContainer {
                 vision = new Vision(drive, new VisionIO() {}, new VisionIO() {});
                 turret = new Turret(new TurretIO() {}, drive::getChassisSpeeds);
                 intake = new Intake(new IntakeIO() {});
-                spindexer = new Spindexer(new SpindexerIO() {});
                 transfer = new Transfer(new TransferIO() {});
                 shooter = new Shooter(new ShooterIO() {});
                 hood = new Hood(new HoodIO() {});
-                align = new AutoAlign(drive::getPose);
+                diverter = new Diverter(new DiverterIO() {});
                 aimAssist = new AutoAim(drive::getPose);
 
                 break;
@@ -192,22 +207,12 @@ public class RobotContainer {
         autoChooser.addOption("Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
         autoChooser.addOption("Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
 
-        visualizer = new RobotVisualizer(
-                turret::getTurretAngleRads,
-                transfer::getRoll,
-                spindexer::getAngleRads,
-                intake::getPivotAngleRadsToHorizontal,
-                hood::getAngleRadsToHorizontal);
-
-        manager = new HeldGamePieceManager(
-                intake::getRollerVelocity,
-                spindexer::getAngleRads,
-                transfer::getAngularVelocityRadPerSec,
-                shooter::getAngularVelocityRadPerSec,
-                hood::getAngleRadsToHorizontal,
-                turret::getTurretAngleRads,
-                visualizer::getHoodTransform,
-                driveSimulation);
+        if (visualizer == null) {
+            visualizer = new RobotVisualizer(
+                    turret::getTurretAngleRads,
+                    hood::getAngleRadsToHorizontal,
+                    diverter::getPivotAngleRadsToHorizontal);
+        }
 
         // Configure the button bindings
         configureButtonBindings();
@@ -228,17 +233,11 @@ public class RobotContainer {
                 () -> -controller.getLeftX(),
                 () -> -controller.getRightX(),
                 true));
-        turret.setDefaultCommand(aimAssist.aim(turret, hood));
+        turret.setDefaultCommand(aimAssist.aimAtSpeaker(turret, hood));
+        intake.setDefaultCommand(new RunCommand(() -> intake.setState(IntakeState.INTAKING), intake));
 
         // --- Driver Controls ---
-        controller.povLeft().whileTrue(align.reefAlignLeft(drive));
-        controller.povDown().whileTrue(align.reefAlignMid(drive));
-        controller.povRight().whileTrue(align.reefAlignRight(drive));
-
-        controller
-                .leftBumper()
-                .onTrue(new InstantCommand(() -> intake.setState(IntakeState.DEPLOYED)))
-                .onFalse(new InstantCommand(() -> intake.setState(IntakeState.STOWED)));
+        controller.leftBumper().whileTrue(aimAssist.ampAlign(drive));
 
         controller
                 .rightBumper()
@@ -246,14 +245,37 @@ public class RobotContainer {
                 .onFalse(new InstantCommand(() -> transfer.setState(TransferState.OFF)));
 
         controller
+                .leftTrigger()
+                .onTrue(new InstantCommand(() -> diverter.setState(DiverterState.DEPLOYED)))
+                .whileTrue(aimAssist.aimAtAmp(turret, hood))
+                .onFalse(new InstantCommand(() -> diverter.setState(DiverterState.STOWED)));
+
+        // prevent longer than momentary control of multiple notes
+        Trigger dualWieldingTrigger = new Trigger(multiNotePossession).debounce(2.5);
+
+        // eject one note
+        controller
                 .b()
-                .onTrue(new InstantCommand(() -> {
-                    intake.setState(IntakeState.EJECTING);
-                    transfer.setState(TransferState.REVERSE);
-                }))
+                .or(dualWieldingTrigger)
+                .whileTrue(new RunCommand(
+                        () -> {
+                            intake.setState(IntakeState.EJECTING);
+                        },
+                        intake));
+
+        // eject both notes
+        controller
+                .x()
+                .whileTrue(new RunCommand(
+                        () -> {
+                            intake.setState(IntakeState.EJECTING);
+                            transfer.setState(TransferState.REVERSE);
+                            diverter.setState(DiverterState.REVERSE);
+                        },
+                        intake))
                 .onFalse(new InstantCommand(() -> {
-                    intake.setState(IntakeState.STOWED);
                     transfer.setState(TransferState.OFF);
+                    diverter.setState(DiverterState.STOWED);
                 }));
 
         // Reset gyro / odometry
@@ -265,10 +287,6 @@ public class RobotContainer {
         controller.start().onTrue(Commands.runOnce(resetGyro, drive).ignoringDisable(true));
 
         // --- Operator Controls ---
-        opController.a().onTrue(new InstantCommand(() -> aimAssist.setCurrentGoal(Goal.UPTOWN)));
-        opController.x().onTrue(new InstantCommand(() -> aimAssist.setCurrentGoal(Goal.DOWNTOWN)));
-        opController.b().onTrue(new InstantCommand(() -> aimAssist.setCurrentGoal(Goal.LOW_FOOTHILL)));
-        opController.y().onTrue(new InstantCommand(() -> aimAssist.setCurrentGoal(Goal.HIGH_FOOTHILL)));
     }
 
     /**
@@ -283,7 +301,7 @@ public class RobotContainer {
     public void resetSimulationField() {
         if (Constants.currentMode != Constants.Mode.SIM) return;
 
-        drive.setPose(new Pose2d(3.005, 2.881, Rotation2d.kCW_90deg));
+        drive.setPose(new Pose2d(15.22, 5.516, Rotation2d.kCW_90deg));
         SimulatedArena.getInstance().resetFieldForAuto();
     }
 
@@ -294,11 +312,7 @@ public class RobotContainer {
         manager.periodic();
         Logger.recordOutput("FieldSimulation/Pose", new Pose3d(driveSimulation.getSimulatedDriveTrainPose()));
         Logger.recordOutput(
-                "FieldSimulation/Red Speech Bubbles",
-                SimulatedArena.getInstance().getGamePiecesArrayByType("Red Speech Bubble"));
-        Logger.recordOutput(
-                "FieldSimulation/Blue Speech Bubbles",
-                SimulatedArena.getInstance().getGamePiecesArrayByType("Blue Speech Bubble"));
+                "FieldSimulation/Notes", SimulatedArena.getInstance().getGamePiecesArrayByType("Note"));
     }
 
     public static boolean isRedAlliance() {

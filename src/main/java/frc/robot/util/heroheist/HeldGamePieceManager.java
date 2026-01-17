@@ -75,18 +75,13 @@ public class HeldGamePieceManager {
         this.chassisSpeedsSupplier = driveSimulation::getDriveTrainSimulatedChassisSpeedsFieldRelative;
 
         blueBubbleIntakeSim = IntakeSimulation.OverTheBumperIntake(
-                "Blue Speech Bubble",
-                driveSimulation,
-                Inches.of(26),
-                Inches.of(10),
-                IntakeSimulation.IntakeSide.LEFT,
-                6);
+                "Fuel", driveSimulation, Inches.of(26), Inches.of(10), IntakeSimulation.IntakeSide.RIGHT, 6);
         redBubbleIntakeSim = IntakeSimulation.OverTheBumperIntake(
                 "Red Speech Bubble",
                 driveSimulation,
                 Inches.of(26),
                 Inches.of(10),
-                IntakeSimulation.IntakeSide.LEFT,
+                IntakeSimulation.IntakeSide.RIGHT,
                 6);
     }
 

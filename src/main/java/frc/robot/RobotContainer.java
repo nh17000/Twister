@@ -14,6 +14,8 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
+import com.pathplanner.lib.events.EventTrigger;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -23,6 +25,7 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants.IntakeConstants.IntakeState;
@@ -59,9 +62,10 @@ import frc.robot.subsystems.turret.TurretIOReal;
 import frc.robot.subsystems.turret.TurretIOSim;
 import frc.robot.subsystems.vision.*;
 import frc.robot.util.heroheist.HeldGamePieceManager;
-import frc.robot.util.heroheist.HeroHeistArena;
+// import frc.robot.util.heroheist.HeroHeistArena;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -88,6 +92,8 @@ public class RobotContainer {
     private final AutoAim aimAssist;
 
     private SwerveDriveSimulation driveSimulation = null;
+
+    private double z;
 
     // Controller
     private static final CommandXboxController controller = new CommandXboxController(0);
@@ -123,7 +129,7 @@ public class RobotContainer {
                 break;
             case SIM:
                 // Sim robot, instantiate physics sim IO implementations
-                SimulatedArena.overrideInstance(new HeroHeistArena());
+                SimulatedArena.overrideInstance(new Arena2026Rebuilt());
 
                 driveSimulation = new SwerveDriveSimulation(Drive.mapleSimConfig, new Pose2d(3, 3, new Rotation2d()));
                 SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
@@ -177,6 +183,8 @@ public class RobotContainer {
 
                 break;
         }
+
+        registerNamedCommands();
 
         // Set up auto routines
         autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -270,6 +278,17 @@ public class RobotContainer {
         controller.y().onTrue(new InstantCommand(() -> aimAssist.setCurrentGoal(Goal.HIGH_FOOTHILL)));
     }
 
+    private void registerNamedCommands() {
+        new EventTrigger("Deploy Intake").onTrue(new InstantCommand(() -> intake.setState(IntakeState.DEPLOYED)));
+        new EventTrigger("Stow Intake").onTrue(new InstantCommand(() -> intake.setState(IntakeState.STOWED)));
+        NamedCommands.registerCommand(
+                "Shoot",
+                new RunCommand(() -> transfer.setState(TransferState.TRANSFERRING))
+                        .withTimeout(1)
+                        .andThen(new InstantCommand(() -> transfer.setState(TransferState.OFF))));
+        NamedCommands.registerCommand("Climb", new RunCommand(() -> this.z += 0.02).withTimeout(3));
+    }
+
     /**
      * Use this to pass the autonomous command to the main {@link Robot} class.
      *
@@ -294,10 +313,10 @@ public class RobotContainer {
         Logger.recordOutput("FieldSimulation/Pose", new Pose3d(driveSimulation.getSimulatedDriveTrainPose()));
         Logger.recordOutput(
                 "FieldSimulation/Red Speech Bubbles",
-                SimulatedArena.getInstance().getGamePiecesArrayByType("Red Speech Bubble"));
-        Logger.recordOutput(
-                "FieldSimulation/Blue Speech Bubbles",
-                SimulatedArena.getInstance().getGamePiecesArrayByType("Blue Speech Bubble"));
+                SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
+        // Logger.recordOutput(
+        //         "FieldSimulation/Blue Speech Bubbles",
+        //         SimulatedArena.getInstance().getGamePiecesArrayByType("Blue Speech Bubble"));
     }
 
     public static boolean isRedAlliance() {

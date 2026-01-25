@@ -26,6 +26,7 @@ import org.ironmaple.simulation.IntakeSimulation;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.AbstractDriveTrainSimulation;
 import org.ironmaple.simulation.gamepieces.GamePieceProjectile;
+import org.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltFuelOnFly;
 import org.littletonrobotics.junction.Logger;
 
 public class HeldGamePieceManager {
@@ -75,21 +76,22 @@ public class HeldGamePieceManager {
         this.chassisSpeedsSupplier = driveSimulation::getDriveTrainSimulatedChassisSpeedsFieldRelative;
 
         blueBubbleIntakeSim = IntakeSimulation.OverTheBumperIntake(
-                "Fuel", driveSimulation, Inches.of(26), Inches.of(10), IntakeSimulation.IntakeSide.RIGHT, 6);
+                "Fuel", driveSimulation, Inches.of(26), Inches.of(1), IntakeSimulation.IntakeSide.LEFT, 6);
         redBubbleIntakeSim = IntakeSimulation.OverTheBumperIntake(
-                "Red Speech Bubble",
-                driveSimulation,
-                Inches.of(26),
-                Inches.of(10),
-                IntakeSimulation.IntakeSide.RIGHT,
-                6);
+                "Red Speech Bubble", driveSimulation, Inches.of(26), Inches.of(1), IntakeSimulation.IntakeSide.LEFT, 6);
     }
 
     public void periodic() {
-        if (intakeVelocitySupplier.getAsDouble() > 0.1 && bubbles.size() < TOTAL_CAPACITY) {
+        double intakeVel = intakeVelocitySupplier.getAsDouble() * IntakeConstants.ROLLER_RADIUS;
+        double spindexerPos = spindexerPositionSupplier.getAsDouble();
+        double transferVel = transferVelocitySupplier.getAsDouble() * TransferConstants.TRANSFER_RADIUS;
+        double shooterVel =
+                shooterVelocitySupplier.getAsDouble() * ShooterConstants.SHOOTER_RADIUS * ShooterConstants.EFFICIENCY;
+        Pose2d robotPose = poseSupplier.get();
+
+        if (intakeVel > 0 && bubbles.size() < TOTAL_CAPACITY) {
             blueBubbleIntakeSim.startIntake();
             redBubbleIntakeSim.startIntake();
-            ;
         } else {
             blueBubbleIntakeSim.stopIntake();
             redBubbleIntakeSim.stopIntake();
@@ -100,13 +102,6 @@ public class HeldGamePieceManager {
         } else if (redBubbleIntakeSim.obtainGamePieceFromIntake()) {
             bubbles.add(new HeldSpeechBubble(true));
         }
-
-        double intakeVel = intakeVelocitySupplier.getAsDouble() * IntakeConstants.ROLLER_RADIUS;
-        double spindexerPos = spindexerPositionSupplier.getAsDouble();
-        double transferVel = transferVelocitySupplier.getAsDouble() * TransferConstants.TRANSFER_RADIUS;
-        double shooterVel =
-                shooterVelocitySupplier.getAsDouble() * ShooterConstants.SHOOTER_RADIUS * ShooterConstants.EFFICIENCY;
-        Pose2d robotPose = poseSupplier.get();
 
         var iterator = bubbles.iterator();
         List<Pose3d> blueHeldbubblePoses = new ArrayList<>();
@@ -139,7 +134,7 @@ public class HeldGamePieceManager {
         Rotation2d turretRotation = Rotation2d.fromRadians(-turretAngleSupplier.getAsDouble() - Math.PI);
         GamePieceProjectile projectile;
         if (isRed) {
-            projectile = new RedBubbleOnFly(
+            projectile = new RebuiltFuelOnFly(
                     poseSupplier.get().getTranslation(),
                     shooterTranslation.rotateBy(turretRotation.unaryMinus()),
                     chassisSpeedsSupplier.get(),
@@ -148,7 +143,7 @@ public class HeldGamePieceManager {
                     MetersPerSecond.of(shooterVel),
                     Radians.of(Math.PI / 2 - hoodAngleSupplier.getAsDouble()));
         } else {
-            projectile = new BlueBubbleOnFly(
+            projectile = new RebuiltFuelOnFly(
                     poseSupplier.get().getTranslation(),
                     shooterTranslation.rotateBy(turretRotation.unaryMinus()),
                     chassisSpeedsSupplier.get(),
@@ -182,7 +177,7 @@ public class HeldGamePieceManager {
         if (slot < 0 || slot >= spindexerSlots.length) return false;
 
         double angle = MathUtil.angleModulus(spindexerPos);
-        double slotAngle = MathUtil.angleModulus(Math.PI / 2.0 + Units.degreesToRadians(slot * 72));
+        double slotAngle = MathUtil.angleModulus(Math.PI / 2.0 + Units.degreesToRadians(slot * (360 / bubbles.size())));
 
         double error = MathUtil.angleModulus(angle - slotAngle);
         return error < Units.degreesToRadians(54);
@@ -193,7 +188,7 @@ public class HeldGamePieceManager {
     }
 
     private Transform3d getBubbleInSpindexerTransform(double spindexerYaw, int slot) {
-        double slotAngle = Math.PI / 2.0 + Units.degreesToRadians(slot * 72);
+        double slotAngle = Math.PI / 2.0 + Units.degreesToRadians(slot * (360 / bubbles.size()));
         return getSpindexerTransform(spindexerYaw)
                 .plus(new Transform3d(
                         new Translation3d(SpindexerConstants.BUBBLE_TO_SPINDEXER, 0, 0.2)
@@ -260,7 +255,7 @@ public class HeldGamePieceManager {
                     break;
                 }
                 case TRANSFER -> {
-                    x += transferVel * dt;
+                    x += transferVel * dt * 2;
                     if (x > 3) {
                         location = Location.SHOOTER;
                         transferFull = false;

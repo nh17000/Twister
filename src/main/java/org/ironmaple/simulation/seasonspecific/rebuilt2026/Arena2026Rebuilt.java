@@ -248,7 +248,7 @@ public class Arena2026Rebuilt extends SimulatedArena {
         }
 
         boolean isOnBlue = !DriverStation.getAlliance().isEmpty()
-                && DriverStation.getAlliance().get() == Alliance.Blue;
+                && DriverStation.getAlliance().get() == Alliance.Red;
 
         if (isOnBlue || !isInEfficiencyMode) {
             for (int x = 0; x < 4; x++) {

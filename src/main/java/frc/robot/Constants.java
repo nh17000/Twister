@@ -472,7 +472,7 @@ public final class Constants {
     public static final class ShooterConstants {
         public enum ShooterState {
             OFF(0),
-            ON(2.67); // 2.67
+            ON(3.24); // 2.67
 
             public final double volts;
 

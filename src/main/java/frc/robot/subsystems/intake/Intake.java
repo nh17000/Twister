@@ -12,7 +12,7 @@ public class Intake extends SubsystemBase {
     @AutoLogOutput
     @Getter
     @Setter
-    private IntakeState state = IntakeState.DEPLOYED;
+    private IntakeState state = IntakeState.STOWED;
 
     private IntakeIO io;
     private final IntakeIOInputsAutoLogged inputs = new IntakeIOInputsAutoLogged();

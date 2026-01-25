@@ -16,12 +16,16 @@ package frc.robot;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.events.EventTrigger;
+import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -129,7 +133,9 @@ public class RobotContainer {
                 break;
             case SIM:
                 // Sim robot, instantiate physics sim IO implementations
-                SimulatedArena.overrideInstance(new Arena2026Rebuilt());
+                var arena = new Arena2026Rebuilt();
+                // arena.setEfficiencyMode(false);
+                SimulatedArena.overrideInstance(arena);
 
                 driveSimulation = new SwerveDriveSimulation(Drive.mapleSimConfig, new Pose2d(3, 3, new Rotation2d()));
                 SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
@@ -145,9 +151,12 @@ public class RobotContainer {
                                 TunerConstants.BackRight, driveSimulation.getModules()[3]),
                         driveSimulation::setSimulationWorldPose);
                 vision = new Vision(
-                        drive // ,
-                        // new VisionIOPhotonVisionSim(
-                        //         camera0Name, robotToCamera0, driveSimulation::getSimulatedDriveTrainPose),
+                        drive,
+                        new VisionIOFake(driveSimulation::getSimulatedDriveTrainPose),
+                        new VisionIOPhotonVisionSim(
+                                VisionConstants.camera0Name,
+                                VisionConstants.robotToCamera0,
+                                driveSimulation::getSimulatedDriveTrainPose)
                         // new VisionIOPhotonVisionSim(
                         //         camera1Name, robotToCamera1, driveSimulation::getSimulatedDriveTrainPose)
                         );
@@ -159,6 +168,9 @@ public class RobotContainer {
                 hood = new Hood(new HoodIOSim());
                 align = new AutoAlign(driveSimulation::getSimulatedDriveTrainPose);
                 aimAssist = new AutoAim(driveSimulation::getSimulatedDriveTrainPose);
+
+                DriverStationSim.setDsAttached(true);
+                DriverStationSim.setAllianceStationId(AllianceStationID.Blue1);
 
                 break;
 
@@ -187,7 +199,7 @@ public class RobotContainer {
         registerNamedCommands();
 
         // Set up auto routines
-        autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+        autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser("auto"));
 
         // Set up SysId routines
         autoChooser.addOption("Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -235,7 +247,8 @@ public class RobotContainer {
                 () -> -controller.getLeftX(),
                 () -> -controller.getRightX(),
                 true));
-        turret.setDefaultCommand(aimAssist.aim(turret, hood));
+        // turret.setDefaultCommand(aimAssist.aim(turret, hood));
+        turret.setDefaultCommand(aimAssist.simpleAim(turret, () -> vision.getTargetX(0)));
 
         // --- Driver Controls ---
         controller.povLeft().whileTrue(align.reefAlignLeft(drive));
@@ -281,12 +294,13 @@ public class RobotContainer {
     private void registerNamedCommands() {
         new EventTrigger("Deploy Intake").onTrue(new InstantCommand(() -> intake.setState(IntakeState.DEPLOYED)));
         new EventTrigger("Stow Intake").onTrue(new InstantCommand(() -> intake.setState(IntakeState.STOWED)));
+
         NamedCommands.registerCommand(
                 "Shoot",
                 new RunCommand(() -> transfer.setState(TransferState.TRANSFERRING))
-                        .withTimeout(1)
+                        .withTimeout(2)
                         .andThen(new InstantCommand(() -> transfer.setState(TransferState.OFF))));
-        NamedCommands.registerCommand("Climb", new RunCommand(() -> this.z += 0.02).withTimeout(3));
+        NamedCommands.registerCommand("Climb", new RunCommand(() -> this.z += 0.0067).withTimeout(1));
     }
 
     /**
@@ -301,6 +315,7 @@ public class RobotContainer {
     public void resetSimulationField() {
         if (Constants.currentMode != Constants.Mode.SIM) return;
 
+        this.z = 0;
         drive.setPose(new Pose2d(3.005, 2.881, Rotation2d.kCW_90deg));
         SimulatedArena.getInstance().resetFieldForAuto();
     }
@@ -310,7 +325,10 @@ public class RobotContainer {
 
         SimulatedArena.getInstance().simulationPeriodic();
         manager.periodic();
-        Logger.recordOutput("FieldSimulation/Pose", new Pose3d(driveSimulation.getSimulatedDriveTrainPose()));
+        Logger.recordOutput(
+                "FieldSimulation/Pose",
+                new Pose3d(driveSimulation.getSimulatedDriveTrainPose())
+                        .transformBy(new Transform3d(0, 0, z, Rotation3d.kZero)));
         Logger.recordOutput(
                 "FieldSimulation/Red Speech Bubbles",
                 SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));

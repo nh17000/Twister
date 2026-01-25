@@ -3,6 +3,7 @@ package frc.robot.commands;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import frc.robot.Constants;
@@ -37,6 +38,7 @@ public class AutoAim {
     private Goal currentGoal = Goal.HUB;
 
     private Supplier<Pose2d> robotSupplier;
+    private Supplier<ChassisSpeeds> speedsSupplier;
 
     public AutoAim(Supplier<Pose2d> robotPoseSupplier) {
         this.robotSupplier = robotPoseSupplier;
@@ -80,5 +82,12 @@ public class AutoAim {
         double launchAngle = Math.atan(tanTheta); // ~= Math.atan(h / x) w/ gravity compensation
 
         return MathUtil.clamp(Math.PI / 2 - launchAngle, HoodConstants.HOOD_MIN_ANGLE, HoodConstants.HOOD_MAX_ANGLE);
+    }
+
+    public Command simpleAim(Turret turret, Supplier<Rotation2d> txSupplier) {
+        return new RunCommand(() -> {
+            turret.followTarget(
+                    () -> Rotation2d.fromRadians(turret.getTurretAngleRads()).plus(txSupplier.get()));
+        });
     }
 }

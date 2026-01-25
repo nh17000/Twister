@@ -15,7 +15,7 @@ public class Shooter extends SubsystemBase {
     @Setter
     private ShooterState state = ShooterState.ON;
 
-    private final LoggedTunableNumber shooterVolts = new LoggedTunableNumber("Shooter/Volts", 2.67);
+    private final LoggedTunableNumber shooterVolts = new LoggedTunableNumber("Shooter/Volts", ShooterState.ON.volts);
 
     private ShooterIO io;
     private final ShooterIOInputsAutoLogged inputs = new ShooterIOInputsAutoLogged();

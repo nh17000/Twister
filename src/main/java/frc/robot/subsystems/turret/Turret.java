@@ -44,6 +44,11 @@ public class Turret extends SubsystemBase {
         return inputs.turretData.position() * TurretConstants.TURRET_P_COEFFICIENT;
     }
 
+    @AutoLogOutput
+    public double getTurretAngleDegs() {
+        return Units.radiansToDegrees(getTurretAngleRads());
+    }
+
     private double wrap(double target) {
         target = Math.IEEEremainder(target, 2 * Math.PI);
 

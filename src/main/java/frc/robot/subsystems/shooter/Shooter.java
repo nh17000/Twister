@@ -45,4 +45,9 @@ public class Shooter extends SubsystemBase {
     public double getAngularVelocityRadPerSec() {
         return inputs.shooterOneData.velocity() * ShooterConstants.SHOOTER_P_COEFFICIENT;
     }
+
+    @AutoLogOutput
+    public double getFuelExitVelocity() {
+        return getAngularVelocityRadPerSec() * ShooterConstants.SHOOTER_RADIUS * ShooterConstants.EFFICIENCY;
+    }
 }

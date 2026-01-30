@@ -128,7 +128,7 @@ public class RobotContainer {
                 shooter = new Shooter(new ShooterIOReal());
                 hood = new Hood(new HoodIOReal());
                 align = new AutoAlign(drive::getPose);
-                aimAssist = new AutoAim(drive::getPose);
+                aimAssist = new AutoAim(drive::getPose, drive::getChassisSpeeds, shooter::getFuelExitVelocity);
 
                 break;
             case SIM:
@@ -151,12 +151,11 @@ public class RobotContainer {
                                 TunerConstants.BackRight, driveSimulation.getModules()[3]),
                         driveSimulation::setSimulationWorldPose);
                 vision = new Vision(
-                        drive,
-                        new VisionIOFake(driveSimulation::getSimulatedDriveTrainPose),
-                        new VisionIOPhotonVisionSim(
-                                VisionConstants.camera0Name,
-                                VisionConstants.robotToCamera0,
-                                driveSimulation::getSimulatedDriveTrainPose)
+                        drive, new VisionIOFake(driveSimulation::getSimulatedDriveTrainPose) // ,
+                        // new VisionIOPhotonVisionSim(
+                        //         VisionConstants.camera0Name,
+                        //         VisionConstants.robotToCamera0,
+                        //         driveSimulation::getSimulatedDriveTrainPose)
                         // new VisionIOPhotonVisionSim(
                         //         camera1Name, robotToCamera1, driveSimulation::getSimulatedDriveTrainPose)
                         );
@@ -167,7 +166,10 @@ public class RobotContainer {
                 shooter = new Shooter(new ShooterIOSim());
                 hood = new Hood(new HoodIOSim());
                 align = new AutoAlign(driveSimulation::getSimulatedDriveTrainPose);
-                aimAssist = new AutoAim(driveSimulation::getSimulatedDriveTrainPose);
+                aimAssist = new AutoAim(
+                        driveSimulation::getSimulatedDriveTrainPose,
+                        driveSimulation::getDriveTrainSimulatedChassisSpeedsFieldRelative,
+                        shooter::getFuelExitVelocity);
 
                 DriverStationSim.setDsAttached(true);
                 DriverStationSim.setAllianceStationId(AllianceStationID.Blue1);
@@ -191,7 +193,7 @@ public class RobotContainer {
                 shooter = new Shooter(new ShooterIO() {});
                 hood = new Hood(new HoodIO() {});
                 align = new AutoAlign(drive::getPose);
-                aimAssist = new AutoAim(drive::getPose);
+                aimAssist = new AutoAim(drive::getPose, drive::getChassisSpeeds, shooter::getFuelExitVelocity);
 
                 break;
         }
@@ -248,7 +250,8 @@ public class RobotContainer {
                 () -> -controller.getRightX(),
                 true));
         // turret.setDefaultCommand(aimAssist.aim(turret, hood));
-        turret.setDefaultCommand(aimAssist.simpleAim(turret, () -> vision.getTargetX(0)));
+        // turret.setDefaultCommand(aimAssist.simpleAim(turret, () -> vision.getTargetX(0)));
+        turret.setDefaultCommand(aimAssist.shootOnTheMove(turret, hood));
 
         // --- Driver Controls ---
         controller.povLeft().whileTrue(align.reefAlignLeft(drive));
@@ -318,6 +321,7 @@ public class RobotContainer {
         this.z = 0;
         drive.setPose(new Pose2d(3.005, 2.881, Rotation2d.kCW_90deg));
         SimulatedArena.getInstance().resetFieldForAuto();
+        manager.preload(50);
     }
 
     public void updateSimulation() {

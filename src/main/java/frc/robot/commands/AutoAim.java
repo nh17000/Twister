@@ -3,6 +3,7 @@ package frc.robot.commands;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
@@ -10,14 +11,17 @@ import frc.robot.Constants;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.Constants.HoodConstants;
 import frc.robot.Constants.ShooterConstants;
+import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.hood.Hood;
 import frc.robot.subsystems.turret.Turret;
 import java.util.List;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.littletonrobotics.junction.AutoLogOutput;
+import org.littletonrobotics.junction.Logger;
 
 public class AutoAim {
     @RequiredArgsConstructor
@@ -39,9 +43,15 @@ public class AutoAim {
 
     private Supplier<Pose2d> robotSupplier;
     private Supplier<ChassisSpeeds> speedsSupplier;
+    private DoubleSupplier fuelExitVelSupplier;
 
-    public AutoAim(Supplier<Pose2d> robotPoseSupplier) {
+    public AutoAim(
+            Supplier<Pose2d> robotPoseSupplier,
+            Supplier<ChassisSpeeds> speedsSupplier,
+            DoubleSupplier fuelExitVelSupplier) {
         this.robotSupplier = robotPoseSupplier;
+        this.speedsSupplier = speedsSupplier;
+        this.fuelExitVelSupplier = fuelExitVelSupplier;
     }
 
     public Command aim(Turret turret, Hood hood) {
@@ -50,7 +60,8 @@ public class AutoAim {
                     Pose2d robotPose = robotSupplier.get();
                     Pose2d targetPose = findDistrictTargetPose(robotPose);
                     turret.followTarget(() -> getTurretTarget(robotPose, targetPose));
-                    hood.followTarget(() -> getHoodTargetAngle(robotPose, targetPose, currentGoal.height));
+                    hood.followTarget(() -> getHoodTargetAngle(
+                            robotPose, targetPose, currentGoal.height, fuelExitVelSupplier.getAsDouble()));
                 },
                 turret,
                 hood);
@@ -61,15 +72,17 @@ public class AutoAim {
     }
 
     private static Rotation2d getTurretTarget(Pose2d robotPose, Pose2d targetPose) {
-        return robotPose
+        Rotation2d turretRotation = robotPose
                 .getRotation()
                 .minus(robotPose.minus(targetPose).getTranslation().getAngle());
+
+        return turretRotation;
     }
 
-    private double getHoodTargetAngle(Pose2d robotPose, Pose2d targetPose, double goalHeight) {
+    private double getHoodTargetAngle(Pose2d robotPose, Pose2d targetPose, double goalHeight, double v) {
         double x = robotPose.minus(targetPose).getTranslation().getNorm();
         double h = goalHeight - ShooterConstants.EJECT_HEIGHT;
-        double v = ShooterConstants.TANGENTIAL_VELOCITY_AT_12V; // try using the actual shooter speed
+        // double v = ShooterConstants.TANGENTIAL_VELOCITY_AT_12V; // try using the actual shooter speed
 
         // use positive solution to shoot high and arc down into goal
         // (ball reaches maxiumum then falls into goal, e.g., 2022, 2026)
@@ -89,5 +102,96 @@ public class AutoAim {
             turret.followTarget(
                     () -> Rotation2d.fromRadians(turret.getTurretAngleRads()).plus(txSupplier.get()));
         });
+    }
+
+    public Command shootOnTheMove(Turret turret, Hood hood) {
+        return new RunCommand(
+                () -> {
+                    Pose2d robotPose = robotSupplier.get();
+                    Pose2d targetPose = findDistrictTargetPose(robotPose);
+
+                    ChassisSpeeds speeds = speedsSupplier.get();
+                    Translation2d robotVel = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+
+                    // Horizontal distance to target (no compensation yet)
+                    Translation2d rawTargetVec = targetPose.getTranslation().minus(robotPose.getTranslation());
+                    double dist = rawTargetVec.getNorm();
+
+                    double v = fuelExitVelSupplier.getAsDouble();
+
+                    // rough estimate
+                    double tof1 = dist / Math.max(v, 0.1);
+
+                    Translation2d target1 = targetPose.getTranslation().minus(robotVel.times(tof1));
+
+                    double refinedDist =
+                            target1.minus(robotPose.getTranslation()).getNorm();
+
+                    double tof2 = refinedDist / Math.max(v, 0.1);
+
+                    Translation2d compensatedTarget =
+                            targetPose.getTranslation().minus(robotVel.times(tof2));
+
+                    Pose2d compensatedTargetPose = new Pose2d(compensatedTarget, targetPose.getRotation());
+
+                    // --- Normal ballistic aiming using compensated target ---
+                    turret.followTarget(() -> getTurretTarget(robotPose, compensatedTargetPose));
+
+                    hood.followTarget(
+                            () -> getHoodTargetAngle(robotPose, compensatedTargetPose, currentGoal.height, v));
+
+                    Logger.recordOutput("AutoAim/SOTM/tof", tof2);
+                    Logger.recordOutput("AutoAim/SOTM/rawDist", dist);
+                    Logger.recordOutput("AutoAim/SOTM/robotVel", robotVel.getNorm());
+                    Logger.recordOutput("AutoAim/SOTM/target", compensatedTargetPose);
+                },
+                turret,
+                hood);
+    }
+
+    public Command noTurretSOTM(Hood hood, Drive drive, DoubleSupplier xSupplier, DoubleSupplier ySupplier, Supplier<Rotation2d> rotationSupplier) {
+        return new RunCommand(
+                () -> {
+                    Pose2d robotPose = robotSupplier.get();
+                    Pose2d targetPose = findDistrictTargetPose(robotPose);
+
+                    ChassisSpeeds speeds = speedsSupplier.get();
+                    Translation2d robotVel = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+
+                    // Horizontal distance to target (no compensation yet)
+                    Translation2d rawTargetVec = targetPose.getTranslation().minus(robotPose.getTranslation());
+                    double dist = rawTargetVec.getNorm();
+
+                    double v = fuelExitVelSupplier.getAsDouble();
+
+                    // rough estimate
+                    double tof1 = dist / Math.max(v, 0.1);
+
+                    Translation2d target1 = targetPose.getTranslation().minus(robotVel.times(tof1));
+
+                    double refinedDist =
+                            target1.minus(robotPose.getTranslation()).getNorm();
+
+                    double tof2 = refinedDist / Math.max(v, 0.1);
+
+                    Translation2d compensatedTarget =
+                            targetPose.getTranslation().minus(robotVel.times(tof2));
+
+                    Pose2d compensatedTargetPose = new Pose2d(compensatedTarget, targetPose.getRotation());
+
+                    // --- Normal ballistic aiming using compensated target ---
+                    // turret.followTarget(() -> getTurretTarget(robotPose, compensatedTargetPose));
+
+                    DriveCommands.joystickDriveAtAngle(drive, xSupplier, ySupplier, rotationSupplier);
+
+                    hood.followTarget(
+                            () -> getHoodTargetAngle(robotPose, compensatedTargetPose, currentGoal.height, v));
+
+                    Logger.recordOutput("AutoAim/SOTM/tof", tof2);
+                    Logger.recordOutput("AutoAim/SOTM/rawDist", dist);
+                    Logger.recordOutput("AutoAim/SOTM/robotVel", robotVel.getNorm());
+                    Logger.recordOutput("AutoAim/SOTM/target", compensatedTargetPose);
+                },
+                hood, drive);
     }
 }

@@ -79,6 +79,14 @@ public class HeldGamePieceManager {
                 "Fuel", driveSimulation, Inches.of(26), Inches.of(1), IntakeSimulation.IntakeSide.LEFT, 6);
         redBubbleIntakeSim = IntakeSimulation.OverTheBumperIntake(
                 "Red Speech Bubble", driveSimulation, Inches.of(26), Inches.of(1), IntakeSimulation.IntakeSide.LEFT, 6);
+
+        preload(SPINDEXER_CAPACITY);
+    }
+
+    public void preload(int amt) {
+        for (int i = 0; i < amt; i++) {
+            bubbles.add(new HeldSpeechBubble(false));
+        }
     }
 
     public void periodic() {

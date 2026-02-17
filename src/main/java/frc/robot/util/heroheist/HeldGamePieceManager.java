@@ -31,7 +31,7 @@ import org.littletonrobotics.junction.Logger;
 
 public class HeldGamePieceManager {
     // 5 speech bubbles in spindexer + 1 between transfer & turret
-    private static final int TOTAL_CAPACITY = 25;
+    private static final int TOTAL_CAPACITY = 100;
     private static final int SPINDEXER_CAPACITY = TOTAL_CAPACITY - 1;
     private static final Translation3d BUBBLE_TRANSLATION = new Translation3d(0.11, -0.336, 0.05);
     private static final Rotation3d BUBBLE_ROT = new Rotation3d(0, Units.degreesToRadians(-120), 0);
@@ -263,7 +263,7 @@ public class HeldGamePieceManager {
                     break;
                 }
                 case TRANSFER -> {
-                    x += transferVel * dt * 2;
+                    x += transferVel * dt * 3;
                     if (x > 3) {
                         location = Location.SHOOTER;
                         transferFull = false;

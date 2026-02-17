@@ -20,6 +20,10 @@ public class Shooter extends SubsystemBase {
     private ShooterIO io;
     private final ShooterIOInputsAutoLogged inputs = new ShooterIOInputsAutoLogged();
 
+    @Getter
+    @Setter
+    private double eject;
+
     public Shooter(ShooterIO io) {
         this.io = io;
     }

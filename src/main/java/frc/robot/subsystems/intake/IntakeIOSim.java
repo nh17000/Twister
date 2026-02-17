@@ -52,5 +52,7 @@ public class IntakeIOSim extends IntakeIOTalonFX {
         pivotSimState.setRotorVelocity(pivotPhysicsSim.getVelocityRadPerSec() / IntakeConstants.PIVOT_P_COEFFICIENT);
         rollerSimState.setRotorVelocity(
                 rollerPhysicsSim.getAngularVelocityRadPerSec() / IntakeConstants.ROLLER_P_COEFFICIENT);
+
+        pivotPhysicsSim.hasHitLowerLimit();
     }
 }

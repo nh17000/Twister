@@ -225,6 +225,7 @@ public class RobotContainer {
                 spindexer::getAngleRads,
                 transfer::getAngularVelocityRadPerSec,
                 shooter::getAngularVelocityRadPerSec,
+                // () -> shooter.getEject() / ShooterConstants.SHOOTER_RADIUS / ShooterConstants.EFFICIENCY,
                 hood::getAngleRadsToHorizontal,
                 turret::getTurretAngleRads,
                 visualizer::getHoodTransform,
@@ -243,11 +244,20 @@ public class RobotContainer {
      */
     private void configureButtonBindings() {
         // Default command, normal field-relative drive
+        // drive.setDefaultCommand(DriveCommands.joystickDrive(
+        //         drive,
+        //         () -> -controller.getLeftY(),
+        //         () -> -controller.getLeftX(),
+        //         () -> -controller.getRightX(),
+        //         true));
+
         drive.setDefaultCommand(
                 aimAssist.noTurretSOTM(hood, drive, () -> -controller.getLeftY(), () -> -controller.getLeftX()));
         // turret.setDefaultCommand(aimAssist.aim(turret, hood));
         // turret.setDefaultCommand(aimAssist.simpleAim(turret, () -> vision.getTargetX(0)));
         // turret.setDefaultCommand(aimAssist.shootOnTheMove(turret, hood));
+
+        // shooter.setDefaultCommand(aimAssist.sotm2(shooter, turret, hood::getAngleRadsToHorizontal));
 
         // --- Driver Controls ---
         controller.povLeft().whileTrue(align.reefAlignLeft(drive));

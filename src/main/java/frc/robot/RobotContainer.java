@@ -215,10 +215,11 @@ public class RobotContainer {
 
         visualizer = new RobotVisualizer(
                 turret::getTurretAngleRads,
-                transfer::getRoll,
+                // transfer::getRoll,
+                hood::getAngleRadsToHorizontal,
                 spindexer::getAngleRads,
                 intake::getPivotAngleRadsToHorizontal,
-                hood::getAngleRadsToHorizontal);
+                () -> 0);
 
         manager = new HeldGamePieceManager(
                 intake::getRollerVelocity,
@@ -244,16 +245,16 @@ public class RobotContainer {
      */
     private void configureButtonBindings() {
         // Default command, normal field-relative drive
-        // drive.setDefaultCommand(DriveCommands.joystickDrive(
-        //         drive,
-        //         () -> -controller.getLeftY(),
-        //         () -> -controller.getLeftX(),
-        //         () -> -controller.getRightX(),
-        //         true));
+        drive.setDefaultCommand(DriveCommands.joystickDrive(
+                drive,
+                () -> -controller.getLeftY(),
+                () -> -controller.getLeftX(),
+                () -> -controller.getRightX(),
+                true));
 
-        drive.setDefaultCommand(
-                aimAssist.noTurretSOTM(hood, drive, () -> -controller.getLeftY(), () -> -controller.getLeftX()));
-        // turret.setDefaultCommand(aimAssist.aim(turret, hood));
+        // drive.setDefaultCommand(
+        //         aimAssist.noTurretSOTM(hood, drive, () -> -controller.getLeftY(), () -> -controller.getLeftX()));
+        turret.setDefaultCommand(aimAssist.aim(turret, hood));
         // turret.setDefaultCommand(aimAssist.simpleAim(turret, () -> vision.getTargetX(0)));
         // turret.setDefaultCommand(aimAssist.shootOnTheMove(turret, hood));
 
@@ -264,10 +265,10 @@ public class RobotContainer {
         controller.povDown().whileTrue(align.reefAlignMid(drive));
         controller.povRight().whileTrue(align.reefAlignRight(drive));
 
-        controller
-                .leftBumper()
-                .onTrue(new InstantCommand(() -> intake.setState(IntakeState.DEPLOYED)))
-                .onFalse(new InstantCommand(() -> intake.setState(IntakeState.STOWED)));
+        controller.leftBumper().onTrue(new InstantCommand(() -> {
+            intake.setState(intake.getState() == IntakeState.STOWED ? IntakeState.DEPLOYED : IntakeState.STOWED);
+        }));
+        // .onFalse(new InstantCommand(() -> intake.setState(IntakeState.STOWED)));
 
         controller
                 .rightBumper()
@@ -339,9 +340,7 @@ public class RobotContainer {
                 "FieldSimulation/Pose",
                 new Pose3d(driveSimulation.getSimulatedDriveTrainPose())
                         .transformBy(new Transform3d(0, 0, z, Rotation3d.kZero)));
-        Logger.recordOutput(
-                "FieldSimulation/Red Speech Bubbles",
-                SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
+        Logger.recordOutput("FieldSimulation/Fuel", SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
         // Logger.recordOutput(
         //         "FieldSimulation/Blue Speech Bubbles",
         //         SimulatedArena.getInstance().getGamePiecesArrayByType("Blue Speech Bubble"));

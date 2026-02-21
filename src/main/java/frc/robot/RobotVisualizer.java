@@ -1,59 +1,70 @@
 package frc.robot;
 
-import edu.wpi.first.math.geometry.Pose3d;
+import static frc.robot.Constants.VisualizerConstants.*;
+
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import frc.robot.Constants.HoodConstants;
-import frc.robot.Constants.IntakeConstants;
-import frc.robot.Constants.VisualizerConstants;
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.util.Units;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.littletonrobotics.junction.Logger;
 
-@RequiredArgsConstructor
 public class RobotVisualizer {
     private final DoubleSupplier turretYawSupplier;
-    private final DoubleSupplier transferRollSupplier;
+    private final DoubleSupplier hoodAngleSupplier;
     private final DoubleSupplier spindexerYawSupplier;
-    private final DoubleSupplier intakeRollSupplier;
-    private final DoubleSupplier hoodPitchSupplier;
+    private final DoubleSupplier intakeAngleSupplier;
+    private final DoubleSupplier climberDisplacementSupplier;
 
     @Getter
     private Transform3d hoodTransform = Transform3d.kZero;
 
+    public RobotVisualizer(
+            DoubleSupplier turretYawSupplier,
+            DoubleSupplier hoodAngleSupplier,
+            DoubleSupplier spindexerYawSupplier,
+            DoubleSupplier intakeAngleSupplier,
+            DoubleSupplier climberDisplacementSupplier) {
+        this.turretYawSupplier = turretYawSupplier;
+        this.hoodAngleSupplier = hoodAngleSupplier;
+        this.spindexerYawSupplier = spindexerYawSupplier;
+        this.intakeAngleSupplier = intakeAngleSupplier;
+        this.climberDisplacementSupplier = climberDisplacementSupplier;
+    }
+
     public void periodic() {
         double turretYaw = turretYawSupplier.getAsDouble();
-        double transferRoll = transferRollSupplier.getAsDouble();
+        double hoodPitch = hoodAngleSupplier.getAsDouble();
         double spindexerYaw = spindexerYawSupplier.getAsDouble();
-        double intakeRoll = intakeRollSupplier.getAsDouble();
-        double hoodPitch = hoodPitchSupplier.getAsDouble();
+        double intakeRoll = intakeAngleSupplier.getAsDouble();
+        double climberDisplacement = climberDisplacementSupplier.getAsDouble();
 
-        Transform3d turret = new Transform3d(VisualizerConstants.M0_ZERO, new Rotation3d(0, 0, -turretYaw));
-        Transform3d transfer = new Transform3d(VisualizerConstants.M1_ZERO, new Rotation3d(-transferRoll, 0, 0));
-        Transform3d spindexer = new Transform3d(VisualizerConstants.M2_ZERO, new Rotation3d(0, 0, -spindexerYaw));
-        Transform3d intakeS1 = new Transform3d(
-                VisualizerConstants.M3_ZERO, new Rotation3d(intakeRoll - IntakeConstants.PIVOT_STARTING_ANGLE, 0, 0));
-        Transform3d intakeS2 =
-                new Transform3d(VisualizerConstants.M4_ZERO, new Rotation3d(getIntakeS2Angle(intakeRoll), 0, 0));
-        Transform3d intakeS3 = intakeS1.plus(
-                new Transform3d(VisualizerConstants.M5_OFFSET, new Rotation3d(getIntakeS3Angle(intakeRoll), 0, 0)));
-        hoodTransform = turret.plus(new Transform3d(
-                VisualizerConstants.M6_OFFSET, new Rotation3d(0, -hoodPitch + HoodConstants.HOOD_STARTING_ANGLE, 0)));
+        Transform3d turret = new Transform3d(Z0_ZERO, new Rotation3d(0, 0, -turretYaw + TURRET_STARTING_ANGLE));
+        hoodTransform = turret.plus(new Transform3d(Z1_OFFSET, new Rotation3d(-hoodPitch + HOOD_STARTING_ANGLE, 0, 0)));
+        Transform3d spindexer = new Transform3d(Z2_ZERO, new Rotation3d(0, 0, -spindexerYaw));
+        Transform3d intake = new Transform3d(Z3_ZERO, new Rotation3d(0, -intakeRoll + INTAKE_STARTING_ANGLE, 0));
+        Transform3d intakeGravityRamp =
+                intake.plus(new Transform3d(Z4_OFFSET, new Rotation3d(0, getGravityRampAngle(intakeRoll), 0)));
+        Transform3d climber = new Transform3d(
+                new Translation3d(0, 0, climberDisplacement - CLIMBER_MAX_DISPLACEMENT), Rotation3d.kZero);
 
         Logger.recordOutput(
                 "RobotVisualizer/Components",
-                new Transform3d[] {turret, transfer, spindexer, intakeS1, intakeS2, intakeS3, hoodTransform});
-
-        Logger.recordOutput("RobotVisualizer/Origin", Pose3d.kZero);
+                new Transform3d[] {turret, hoodTransform, spindexer, intake, intakeGravityRamp, climber});
     }
 
-    // https://www.desmos.com/calculator/yvnsugajwe
-    private static double getIntakeS2Angle(double intakeS1Angle) {
-        return 0.903162 * intakeS1Angle + 0.296121 - 1.361145254;
-    }
+    private static double getGravityRampAngle(double intakeAngle) {
+        double intakeAngleDegs = Units.radiansToDegrees(intakeAngle) % 360;
 
-    private static double getIntakeS3Angle(double intakeS1Angle) {
-        return -1.23948 * intakeS1Angle + 0.293516 + 1.142859034;
+        // the ramp wants to point downwards (with gravity) but is
+        // constrained (with rubber bands) from being more than
+        // 39 degrees away from the intake
+        double fieldRelativeAngle = Math.min(intakeAngleDegs - 180 + 39, -90);
+
+        // return an angle relative to the intake
+        // adding 180 bc the CAD was exported with the ramp facing down
+        // and negative of the side of the robot it's on
+        return -(Units.degreesToRadians(fieldRelativeAngle - intakeAngleDegs + 180));
     }
 }

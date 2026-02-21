@@ -31,10 +31,20 @@ import org.littletonrobotics.junction.Logger;
 
 public class HeldGamePieceManager {
     // 5 speech bubbles in spindexer + 1 between transfer & turret
-    private static final int TOTAL_CAPACITY = 100;
+    private static final int TOTAL_CAPACITY = 1000;
     private static final int SPINDEXER_CAPACITY = TOTAL_CAPACITY - 1;
-    private static final Translation3d BUBBLE_TRANSLATION = new Translation3d(0.11, -0.336, 0.05);
+    private static final Translation3d BUBBLE_TRANSLATION = new Translation3d(0.0, -0.036, 0.112);
     private static final Rotation3d BUBBLE_ROT = new Rotation3d(0, Units.degreesToRadians(-120), 0);
+
+    // private final LoggedTunableNumber x = new LoggedTunableNumber("Manager/x", 0.11);
+    // private final LoggedTunableNumber y = new LoggedTunableNumber("Manager/y", -0.336);
+    // private final LoggedTunableNumber z = new LoggedTunableNumber("Manager/z", 0.05);
+    // private final LoggedTunableNumber r = new LoggedTunableNumber("Manager/r", 0.0);
+    // private final LoggedTunableNumber p = new LoggedTunableNumber("Manager/p", 0.0);
+    // private final LoggedTunableNumber yaw = new LoggedTunableNumber("Manager/yaw", 0.0);
+    // private final LoggedTunableNumber r2 = new LoggedTunableNumber("Manager/r2", 0.0);
+    // private final LoggedTunableNumber p2 = new LoggedTunableNumber("Manager/p2", 0.0);
+    // private final LoggedTunableNumber yaw2 = new LoggedTunableNumber("Manager/yaw2", 0.0);
 
     private List<HeldSpeechBubble> bubbles = new ArrayList<>();
     private HeldSpeechBubble[] spindexerSlots = new HeldSpeechBubble[SPINDEXER_CAPACITY];
@@ -76,11 +86,11 @@ public class HeldGamePieceManager {
         this.chassisSpeedsSupplier = driveSimulation::getDriveTrainSimulatedChassisSpeedsFieldRelative;
 
         blueBubbleIntakeSim = IntakeSimulation.OverTheBumperIntake(
-                "Fuel", driveSimulation, Inches.of(26), Inches.of(1), IntakeSimulation.IntakeSide.LEFT, 6);
+                "Fuel", driveSimulation, Inches.of(28), Inches.of(9), IntakeSimulation.IntakeSide.FRONT, 6);
         redBubbleIntakeSim = IntakeSimulation.OverTheBumperIntake(
                 "Red Speech Bubble", driveSimulation, Inches.of(26), Inches.of(1), IntakeSimulation.IntakeSide.LEFT, 6);
 
-        preload(SPINDEXER_CAPACITY);
+        preload(50);
     }
 
     public void preload(int amt) {
@@ -127,13 +137,13 @@ public class HeldGamePieceManager {
             }
         }
 
+        // Logger.recordOutput(
+        //         "GamePieceManager/Held Red Bubbles", redHeldbubblePoses.toArray(new
+        // Pose3d[redHeldbubblePoses.size()]));
         Logger.recordOutput(
-                "GamePieceManager/Held Red Bubbles", redHeldbubblePoses.toArray(new Pose3d[redHeldbubblePoses.size()]));
+                "GamePieceManager/Held Fuel", blueHeldbubblePoses.toArray(new Pose3d[blueHeldbubblePoses.size()]));
         Logger.recordOutput(
-                "GamePieceManager/Held Blue Bubbles",
-                blueHeldbubblePoses.toArray(new Pose3d[blueHeldbubblePoses.size()]));
-        Logger.recordOutput(
-                "GamePieceManager/Test Bubble", new Pose3d(robotPose).transformBy(getBubbleInShooterTransform(4)));
+                "GamePieceManager/Test Fuel", new Pose3d(robotPose).transformBy(getBubbleInShooterTransform(3)));
     }
 
     private void launch(double shooterVel, boolean isRed) {
@@ -192,7 +202,7 @@ public class HeldGamePieceManager {
     }
 
     private Transform3d getSpindexerTransform(double spindexerYaw) {
-        return new Transform3d(VisualizerConstants.M2_ZERO, new Rotation3d(0, 0, -spindexerYaw));
+        return new Transform3d(VisualizerConstants.Z2_ZERO, new Rotation3d(0, 0, -spindexerYaw));
     }
 
     private Transform3d getBubbleInSpindexerTransform(double spindexerYaw, int slot) {
@@ -205,10 +215,14 @@ public class HeldGamePieceManager {
     }
 
     private Transform3d getBubbleInShooterTransform(double x) {
-        double pitch = Units.degreesToRadians(-(6 * x) * (x - 4));
+        double pitch = -(Math.PI / 2.0) * (x - 4); // let go from 1.5 to 0
         return hoodTransformSupplier
                 .get()
-                .plus(new Transform3d(BUBBLE_TRANSLATION.rotateBy(new Rotation3d(0, pitch, 0)), BUBBLE_ROT));
+                // .plus(new Transform3d(
+                //         new Translation3d(this.x.get(), y.get(), z.get())
+                //                 .rotateBy(new Rotation3d(r.get(), p.get(), yaw.get())),
+                //         new Rotation3d(r2.get(), p2.get(), yaw2.get())));
+                .plus(new Transform3d(BUBBLE_TRANSLATION.rotateBy(new Rotation3d(pitch, 0, 0)), BUBBLE_ROT));
     }
 
     class HeldSpeechBubble {
@@ -242,7 +256,7 @@ public class HeldGamePieceManager {
                     if (x < 0) {
                         x = 0; // todo implement eject out intake
                     }
-                    transform = new Transform3d(0, 0.5 - x * 0.3, 0.2 * x, Rotation3d.kZero);
+                    transform = new Transform3d(0.5 - x * 0.3, 0, 0.2 * x, Rotation3d.kZero);
                     break;
                 }
                 case SPINDEXER -> {
@@ -263,7 +277,7 @@ public class HeldGamePieceManager {
                     break;
                 }
                 case TRANSFER -> {
-                    x += transferVel * dt * 3;
+                    x += transferVel * dt; // * 3;
                     if (x > 3) {
                         location = Location.SHOOTER;
                         transferFull = false;
@@ -281,7 +295,11 @@ public class HeldGamePieceManager {
                         transferFull = false;
                         break;
                     }
-                    transform = new Transform3d(0, -0.2, 0.2 + (x - 2) * 0.4, Rotation3d.kZero);
+                    transform = new Transform3d(
+                            VisualizerConstants.Z0_ZERO.getX(),
+                            VisualizerConstants.Z0_ZERO.getY(),
+                            0.2 + (x - 2) * 0.4,
+                            Rotation3d.kZero);
                     break;
                 }
                 case SHOOTER -> {

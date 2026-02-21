@@ -95,8 +95,8 @@ public final class Constants {
         public static final Pose2d CENTER =
                 new Pose2d(FIELD_LENGTH / 2.0, FieldConstants.FIELD_WIDTH / 2.0, Rotation2d.kZero);
 
-        public static final Pose2d RED_HUB = new Pose2d(4.5974, 4.034536, Rotation2d.kZero);
-        public static final Pose2d BLUE_HUB = new Pose2d(11.938, 4.034536, Rotation2d.kZero);
+        public static final Pose2d BLUE_HUB = new Pose2d(4.5974, 4.034536, Rotation2d.kZero);
+        public static final Pose2d RED_HUB = new Pose2d(11.938, 4.034536, Rotation2d.kZero);
 
         public static final double HUB_HEIGHT = Units.inchesToMeters(72);
 
@@ -239,16 +239,24 @@ public final class Constants {
     }
 
     public static final class VisualizerConstants {
-        public static final Translation3d M0_ZERO = new Translation3d(0.0, -0.174625, 0.0);
-        public static final Translation3d M1_ZERO = new Translation3d(0.0, -0.071544, 0.368300);
-        public static final Translation3d M2_ZERO = new Translation3d(0.0, -0.009525, 0.0);
-        public static final Translation3d M3_ZERO = new Translation3d(0.0, 0.136351, 0.193383);
-        public static final Translation3d M4_ZERO = new Translation3d(0.0, 0.215676, 0.118053);
-        public static final Translation3d M5_ZERO = new Translation3d(0.0, 0.246637, 0.450096);
-        public static final Translation3d M5_OFFSET = M5_ZERO.minus(M3_ZERO);
-        public static final Translation3d M6_ZERO =
-                new Translation3d(-0.095038, 0.160961, 0.560462); // why is y positive?
-        public static final Translation3d M6_OFFSET = M6_ZERO.minus(M0_ZERO);
+        public static final Translation3d Z0_ZERO = new Translation3d(-0.134550, -0.143323, 0);
+        public static final Translation3d Z1_ZERO = new Translation3d(-0.1235075, -0.041317, 0.519888);
+        public static final Translation3d Z2_ZERO = new Translation3d(0.024588, 0, 0);
+        public static final Translation3d Z3_ZERO = new Translation3d(0.205374, 0, 0.260350);
+        public static final Translation3d Z4_ZERO = new Translation3d(0.302910, 0, 0.646415);
+
+        public static final Translation3d Z1_OFFSET = Z1_ZERO.minus(Z0_ZERO);
+        public static final Translation3d Z4_OFFSET = Z4_ZERO.minus(Z3_ZERO);
+
+        public static final double TURRET_STARTING_ANGLE = Math.PI / 2;
+
+        public static final double HOOD_STARTING_ANGLE = Units.degreesToRadians(61.549451);
+        public static final double HOOD_MIN_ANGLE = Units.degreesToRadians(24.652849);
+        public static final double HOOD_MAX_ANGLE = Units.degreesToRadians(69.652849);
+
+        public static final double INTAKE_STARTING_ANGLE = Math.PI / 2;
+
+        public static final double CLIMBER_MAX_DISPLACEMENT = Units.inchesToMeters(5.875);
     }
 
     public static final class TurretConstants {
@@ -310,7 +318,7 @@ public final class Constants {
 
     public static final class IntakeConstants {
         public enum IntakeState {
-            STOWED(Units.degreesToRadians(55), 0),
+            STOWED(Units.degreesToRadians(90), 0),
             DEPLOYED(PIVOT_MIN_ANGLE, 6),
             EJECTING(Units.degreesToRadians(45), -6);
 
@@ -370,9 +378,9 @@ public final class Constants {
         public static final double ROLLER_GEAR_RATIO = (35. / 14.); // 2.5
         public static final double ROLLER_P_COEFFICIENT = 2 * Math.PI / ROLLER_GEAR_RATIO;
 
-        public static final double PIVOT_STARTING_ANGLE = Units.degreesToRadians(66.75);
-        public static final double PIVOT_MIN_ANGLE = Units.degreesToRadians(28.07);
-        public static final double PIVOT_MAX_ANGLE = Units.degreesToRadians(66.75);
+        public static final double PIVOT_STARTING_ANGLE = Units.degreesToRadians(90);
+        public static final double PIVOT_MIN_ANGLE = Units.degreesToRadians(0);
+        public static final double PIVOT_MAX_ANGLE = Units.degreesToRadians(90);
 
         public static final double PIVOT_MASS = Units.lbsToKilograms(7);
         public static final double PIVOT_LENGTH = Units.inchesToMeters(18);
@@ -546,9 +554,9 @@ public final class Constants {
         public static final double HOOD_GEAR_RATIO = (186. / 10.) * (30. / 14.); // ~39.86
         public static final double HOOD_P_COEFFICIENT = 2 * Math.PI / HOOD_GEAR_RATIO;
 
-        public static final double HOOD_STARTING_ANGLE = Units.degreesToRadians(30);
-        public static final double HOOD_MIN_ANGLE = Units.degreesToRadians(0); // 30
-        public static final double HOOD_MAX_ANGLE = Units.degreesToRadians(90); // 75
+        public static final double HOOD_STARTING_ANGLE = Units.degreesToRadians(61.549451);
+        public static final double HOOD_MIN_ANGLE = Units.degreesToRadians(24.652849); // 30
+        public static final double HOOD_MAX_ANGLE = Units.degreesToRadians(69.652849); // 75
 
         public static final double HOOD_MASS = Units.lbsToKilograms(4);
         public static final double HOOD_LENGTH = Units.inchesToMeters(8);

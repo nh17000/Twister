@@ -6,12 +6,15 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import frc.robot.Constants;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.Constants.HoodConstants;
 import frc.robot.Constants.ShooterConstants;
+import frc.robot.Constants.VisualizerConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.hood.Hood;
 import frc.robot.subsystems.shooter.Shooter;
@@ -52,6 +55,9 @@ public class AutoAim {
     private Supplier<ChassisSpeeds> speedsSupplier;
     private DoubleSupplier fuelExitVelSupplier;
 
+    private static final Transform2d turretTransform =
+            new Transform2d(VisualizerConstants.Z0_ZERO.toTranslation2d(), Rotation2d.kZero);
+
     public AutoAim(
             Supplier<Pose2d> robotPoseSupplier,
             Supplier<ChassisSpeeds> speedsSupplier,
@@ -64,7 +70,7 @@ public class AutoAim {
     public Command aim(Turret turret, Hood hood) {
         return new RunCommand(
                 () -> {
-                    Pose2d robotPose = robotSupplier.get();
+                    Pose2d robotPose = robotSupplier.get().transformBy(turretTransform.inverse());
                     Pose2d targetPose = findDistrictTargetPose(robotPose);
                     turret.followTarget(() -> getTurretTarget(robotPose, targetPose));
                     hood.followTarget(() -> getHoodTargetAngle(
@@ -75,7 +81,10 @@ public class AutoAim {
     }
 
     private Pose2d findDistrictTargetPose(Pose2d robotPose) {
-        return robotPose.nearest(currentGoal.locations);
+        // return robotPose.nearest(currentGoal.locations);
+        return DriverStation.getAlliance().orElse(Alliance.Blue).equals(Alliance.Blue)
+                ? FieldConstants.BLUE_HUB
+                : FieldConstants.RED_HUB;
     }
 
     private static Rotation2d getTurretTarget(Pose2d robotPose, Pose2d targetPose) {
@@ -171,7 +180,7 @@ public class AutoAim {
     public Command noTurretSOTM(Hood hood, Drive drive, DoubleSupplier xSupplier, DoubleSupplier ySupplier) {
         return new RunCommand(
                         () -> {
-                            Pose2d robotPose = robotSupplier.get();
+                            Pose2d robotPose = robotSupplier.get().plus(turretTransform);
                             Pose2d targetPose = findDistrictTargetPose(robotPose);
 
                             ChassisSpeeds speeds = speedsSupplier.get();
